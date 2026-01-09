@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TOEFL Vocabulary</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap"
+        rel="stylesheet">
+    <!-- Ionicons for Icons -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>TOEFL Vocab</h1>
+            <div class="header-actions">
+                <button id="settings-btn" aria-label="Settings">
+                    <ion-icon name="settings-outline"></ion-icon>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="app-content">
+            <!-- Loading State -->
+            <div id="loading-view" class="view active">
+                <div class="spinner"></div>
+                <p>Loading words...</p>
+            </div>
+
+            <!-- Word List View -->
+            <div id="list-view" class="view">
+                <div class="search-bar">
+                    <ion-icon name="search-outline"></ion-icon>
+                    <input type="text" id="word-search" placeholder="Search words...">
+                </div>
+
+                <div id="word-list" class="word-list">
+                    <!-- Word Items will be injected here -->
+                </div>
+            </div>
+
+            <!-- Quiz View -->
+            <!-- Quiz View (Disabled) -->
+            <div id="quiz-view" class="view">
+                <div class="placeholder-container">
+                    <ion-icon name="construct-outline"></ion-icon>
+                    <h2>準備中...</h2>
+                    <p>クイズ機能は現在開発中です。</p>
+                </div>
+            </div>
+
+            <!-- Flash Card View -->
+            <div id="flash-card-view" class="view">
+                <div class="fc-header">
+                    <button id="fc-close-btn" class="icon-btn" aria-label="Close">
+                        <ion-icon name="close-outline"></ion-icon>
+                    </button>
+                    <span id="fc-progress">1 / 100</span>
+                </div>
+
+                <div class="fc-container">
+                    <div class="flash-card" id="flash-card">
+                        <div class="fc-front">
+                            <div class="fc-content">
+                                <h1 id="fc-word">Word</h1>
+                                <button id="fc-audio-btn" class="fc-audio-btn">
+                                    <ion-icon name="volume-high-outline"></ion-icon>
+                                </button>
+                            </div>
+                            <span class="fc-hint">Tap to flip</span>
+                        </div>
+                        <div class="fc-back">
+                            <div class="fc-content">
+                                <h2 id="fc-meaning">Meaning</h2>
+                                <div class="fc-example-box">
+                                    <p id="fc-example" class="fc-en">Example sentence.</p>
+                                    <p id="fc-example-ja" class="fc-ja">Example translation.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="fc-controls">
+                    <button id="fc-prev-btn" class="circle-btn">
+                        <ion-icon name="arrow-back-outline"></ion-icon>
+                    </button>
+                    <button id="fc-next-btn" class="circle-btn primary">
+                        <ion-icon name="arrow-forward-outline"></ion-icon>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Settings View -->
+            <div id="settings-view" class="view">
+                <h2>Settings</h2>
+                <!-- <div class="setting-item">
+                    <label for="gas-url">GAS Web App URL</label>
+                    <input type="text" id="gas-url" placeholder="Paste your GAS URL here" disabled value="Configured in config.js">
+                </div> -->
+
+                <div class="setting-item">
+                    <h3>Appearance</h3>
+                    <div class="theme-selector">
+                        <button class="theme-btn active" data-theme="nebula">
+                            <span class="preview nebula-preview"></span>
+                            <span>Nebula</span>
+                        </button>
+                        <button class="theme-btn" data-theme="nature">
+                            <span class="preview nature-preview"></span>
+                            <span>Nature</span>
+                        </button>
+                        <button class="theme-btn" data-theme="midnight">
+                            <span class="preview midnight-preview"></span>
+                            <span>Midnight</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="setting-actions">
+                    <button id="close-settings-btn" class="secondary-btn">Close</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation for Mobile -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-target="list-view">
+                <ion-icon name="list-outline"></ion-icon>
+                <span>List</span>
+            </button>
+            <button class="nav-item" data-target="quiz-view">
+                <ion-icon name="school-outline"></ion-icon>
+                <span>Quiz</span>
+            </button>
+        </nav>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
