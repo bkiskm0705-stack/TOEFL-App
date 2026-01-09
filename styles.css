@@ -684,6 +684,8 @@ body {
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
+    margin: 0 auto;
+    /* Center horizontally */
 }
 
 .fc-audio-btn:hover {
@@ -697,6 +699,15 @@ body {
     font-size: 0.8rem;
     color: var(--text-secondary);
     opacity: 0.6;
+}
+
+/* POS tag on Card Back */
+.fc-back .pos {
+    margin-left: 0;
+    margin-right: 0.6rem;
+    display: inline-block;
+    vertical-align: middle;
+    font-size: 0.9rem;
 }
 
 /* Back Content */

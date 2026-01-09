@@ -332,7 +332,7 @@ function renderCard() {
     fcWord.textContent = item.word;
 
     // Back
-    fcMeaning.textContent = item.meaning;
+    fcMeaning.innerHTML = `<span class="pos">${item.pos}</span> ${item.meaning}`;
     fcExample.textContent = item.example;
     fcExampleJa.textContent = item.example_ja || '';
 
