@@ -448,7 +448,12 @@ function populateVoiceList() {
         { name: 'Google US English', label: 'US English', icon: 'earth-outline', color: '#55efc4', type: 'US' },
         { name: 'Microsoft David', label: 'David (US)', icon: 'person-outline', color: '#a29bfe', type: 'US' },
         { name: 'Microsoft Mark', label: 'Mark (US)', icon: 'person-outline', color: '#6c5ce7', type: 'US' },
-        { name: 'Microsoft Zira', label: 'Zira (US)', icon: 'woman-outline', color: '#fd79a8', type: 'US' }
+        { name: 'Microsoft Zira', label: 'Zira (US)', icon: 'woman-outline', color: '#fd79a8', type: 'US' },
+        // User requested additions (likely iOS/macOS)
+        { name: 'Fenrir', label: 'Fenrir', icon: 'man-outline', color: '#636e72', type: 'Special' },
+        { name: 'Leda', label: 'Leda', icon: 'woman-outline', color: '#fab1a0', type: 'Special' },
+        { name: 'Charon', label: 'Charon', icon: 'man-outline', color: '#2d3436', type: 'Special' },
+        { name: 'Kore', label: 'Kore', icon: 'woman-outline', color: '#e17055', type: 'Special' }
     ];
 
     voiceContainer.innerHTML = '';

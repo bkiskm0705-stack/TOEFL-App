@@ -110,7 +110,19 @@ body {
     -webkit-text-fill-color: transparent;
     background-clip: text;
     /* Fix lint */
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
 }
+
+.version {
+    font-size: 0.8rem;
+    font-weight: 400;
+    opacity: 0.7;
+    -webkit-text-fill-color: var(--text-primary);
+}
+
+
 
 #settings-btn {
     background: none;
