@@ -505,24 +505,36 @@ function populateVoiceList() {
         }
     });
 
-    // 2. Mobile/Fallback: Check for generic system voices if targets missing
-    if (!hasUS) {
-        // Find any en-US
-        const usVoice = voices.find(v => v.lang === 'en-US' && !addedURIs.has(v.voiceURI));
-        if (usVoice) {
-            createBtn(usVoice, 'US System', 'earth-outline', '#55efc4');
-            hasUS = true;
-        }
-    }
+    // 2. Mobile/Fallback: Discover ALL other English voices
+    voices.forEach(voice => {
+        if (!addedURIs.has(voice.voiceURI) && voice.lang.startsWith('en')) {
+            // Determine icon and color based on region/name
+            let icon = 'mic-outline';
+            let color = '#b2bec3';
+            let label = voice.name;
 
-    if (!hasUK) {
-        // Find any en-GB
-        const ukVoice = voices.find(v => v.lang === 'en-GB' && !addedURIs.has(v.voiceURI));
-        if (ukVoice) {
-            createBtn(ukVoice, 'UK System', 'earth-outline', '#74b9ff');
-            hasUK = true;
+            // Simple cleanup for clean labels on mobile
+            label = label.replace('English (United States)', '').replace('English (United Kingdom)', '').trim();
+            if (!label) label = voice.name; // Revert if empty
+
+            if (voice.lang === 'en-US' || voice.lang === 'en_US') {
+                icon = 'earth-outline';
+                color = '#55efc4';
+                if (!label.includes('(US)')) label += ' (US)';
+            } else if (voice.lang === 'en-GB' || voice.lang === 'en_GB') {
+                icon = 'earth-outline';
+                color = '#74b9ff';
+                if (!label.includes('(UK)')) label += ' (UK)';
+            } else {
+                // AU, IN, etc.
+                icon = 'globe-outline';
+                color = '#fdcb6e';
+                label += ` (${voice.lang.split('-')[1] || voice.lang})`;
+            }
+
+            createBtn(voice, label, icon, color);
         }
-    }
+    });
 
     // 3. Last Resort: Default if nothing added
     if (addedURIs.size === 0 && voices.length > 0) {
