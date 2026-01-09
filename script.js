@@ -112,6 +112,7 @@ function setupEventListeners() {
         document.querySelector('[data-target="list-view"]').classList.add('active');
     });
 
+
     // Theme Switching
     themeBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -119,6 +120,8 @@ function setupEventListeners() {
             applyTheme(theme);
         });
     });
+
+
 
     // Search & Filter
     wordSearchInput.addEventListener('input', renderWordList);
@@ -155,6 +158,20 @@ function setupEventListeners() {
         const word = fcList[fcCurrentIndex].word;
         speakWord(word);
     });
+
+    // Example Audio button (prevent flip)
+    const fcExampleAudioBtn = document.getElementById('fc-example-audio-btn');
+    fcExampleAudioBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const example = fcList[fcCurrentIndex].example;
+        speakWord(example);
+    });
+
+    // Initialize Voices
+    populateVoiceList();
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = populateVoiceList;
+    }
 }
 
 // Data Handling
@@ -394,10 +411,10 @@ function renderWords(words) {
             <div class="word-header">
                 <div class="word-title">
                     <span class="word">${item.word}</span>
+                    <span class="pos">${item.pos}</span>
                     <button class="audio-btn" aria-label="Listen">
                         <ion-icon name="volume-medium-outline"></ion-icon>
                     </button>
-                    <span class="pos">${item.pos}</span>
                 </div>
             </div>
             <div class="meaning">${item.meaning}</div>
@@ -416,6 +433,78 @@ function renderWords(words) {
     });
 }
 
+// Voice Settings
+let currentVoiceURI = localStorage.getItem('voiceURI') || null;
+let voices = [];
+
+function populateVoiceList() {
+    voices = window.speechSynthesis.getVoices();
+    const voiceContainer = document.getElementById('voice-selector');
+
+    // Target voices in preferred order with metadata
+    const targetVoices = [
+        { name: 'Google UK English Female', label: 'UK Female', icon: 'woman-outline', color: '#ff7675' },
+        { name: 'Google UK English Male', label: 'UK Male', icon: 'man-outline', color: '#74b9ff' },
+        { name: 'Google US English', label: 'US English', icon: 'earth-outline', color: '#55efc4' },
+        { name: 'Microsoft David', label: 'David (US)', icon: 'person-outline', color: '#a29bfe' },
+        { name: 'Microsoft Mark', label: 'Mark (US)', icon: 'person-outline', color: '#6c5ce7' },
+        { name: 'Microsoft Zira', label: 'Zira (US)', icon: 'woman-outline', color: '#fd79a8' }
+    ];
+
+    voiceContainer.innerHTML = '';
+
+    let foundAny = false;
+
+    targetVoices.forEach(target => {
+        // Find a matching voice in the system list (fuzzy match)
+        const voice = voices.find(v => v.name.includes(target.name));
+
+        if (voice) {
+            foundAny = true;
+            const btn = document.createElement('button');
+            btn.className = 'voice-btn';
+            if (voice.voiceURI === currentVoiceURI) {
+                btn.classList.add('active');
+            }
+
+            btn.innerHTML = `
+                <div class="voice-icon" style="color: ${target.color}">
+                    <ion-icon name="${target.icon}"></ion-icon>
+                </div>
+                <span class="voice-label">${target.label}</span>
+            `;
+
+            btn.onclick = () => {
+                currentVoiceURI = voice.voiceURI;
+                localStorage.setItem('voiceURI', currentVoiceURI);
+
+                // Update UI
+                const allBtns = voiceContainer.querySelectorAll('.voice-btn');
+                allBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Speak test
+                speakWord('Hello, this is a test.');
+            };
+
+            voiceContainer.appendChild(btn);
+        }
+    });
+
+    // Fallback if no target voices found (e.g. mobile or different OS)
+    if (!foundAny) {
+        // Show at least one default English voice or just a generic "Default"
+        const defaultBtn = document.createElement('button');
+        defaultBtn.className = 'voice-btn active';
+        defaultBtn.textContent = 'System Default';
+        defaultBtn.onclick = () => {
+            currentVoiceURI = null; // Reset to let system decide or use first available
+            localStorage.removeItem('voiceURI');
+        };
+        voiceContainer.appendChild(defaultBtn);
+    }
+}
+
 function speakWord(text) {
     if ('speechSynthesis' in window) {
         // Cancel any current speech
@@ -424,6 +513,16 @@ function speakWord(text) {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'en-US';
         utterance.rate = 0.9; // Slightly slower for clarity
+
+        if (currentVoiceURI) {
+            const selectedVoice = voices.find(v => v.voiceURI === currentVoiceURI);
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+                // If user selected a non-English voice, we should still try to speak
+                // but usually they will select an English one.
+            }
+        }
+
         window.speechSynthesis.speak(utterance);
     } else {
         alert('Text-to-speech is not supported in this browser.');

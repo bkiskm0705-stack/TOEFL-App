@@ -83,7 +83,12 @@
                             <div class="fc-content">
                                 <h2 id="fc-meaning">Meaning</h2>
                                 <div class="fc-example-box">
-                                    <p id="fc-example" class="fc-en">Example sentence.</p>
+                                    <div class="fc-example-row">
+                                        <p id="fc-example" class="fc-en">Example sentence.</p>
+                                        <button id="fc-example-audio-btn" class="fc-example-audio-btn">
+                                            <ion-icon name="volume-medium-outline"></ion-icon>
+                                        </button>
+                                    </div>
                                     <p id="fc-example-ja" class="fc-ja">Example translation.</p>
                                 </div>
                             </div>
@@ -124,6 +129,13 @@
                             <span class="preview midnight-preview"></span>
                             <span>Midnight</span>
                         </button>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <h3>Voice</h3>
+                    <div id="voice-selector" class="voice-selector">
+                        <!-- Buttons injected by JS -->
                     </div>
                 </div>
 
