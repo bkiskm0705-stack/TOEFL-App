@@ -35,8 +35,7 @@ const fcAudioBtn = document.getElementById('fc-audio-btn');
 const fcMeaning = document.getElementById('fc-meaning');
 const fcExample = document.getElementById('fc-example');
 const fcExampleJa = document.getElementById('fc-example-ja');
-const fcPrevBtn = document.getElementById('fc-prev-btn');
-const fcNextBtn = document.getElementById('fc-next-btn');
+
 
 // State
 let allWords = [];
@@ -144,8 +143,7 @@ function setupEventListeners() {
     fcCard.addEventListener('click', () => {
         if (!isSwiping) flipCard();
     });
-    fcPrevBtn.addEventListener('click', prevCard);
-    fcNextBtn.addEventListener('click', nextCard);
+
 
     // Swipe Listeners
     fcCard.addEventListener('touchstart', (e) => {

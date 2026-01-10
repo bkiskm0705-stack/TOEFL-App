@@ -884,40 +884,7 @@ body {
     color: var(--text-secondary);
 }
 
-/* Controls */
-.fc-controls {
-    display: flex;
-    justify-content: space-between;
-    padding: 0 1rem;
-    margin-top: auto;
-    /* Push to bottom if container has space */
-}
 
-.circle-btn {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    border: none;
-    font-size: 1.8rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    background: var(--surface-dark);
-    color: var(--text-primary);
-    box-shadow: var(--shadow-sm);
-    transition: all 0.2s;
-}
-
-.circle-btn:active {
-    transform: scale(0.95);
-}
-
-.circle-btn.primary {
-    background: var(--gradient-primary);
-    color: white;
-    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);
-}
 
 /* Quiz Placeholder */
 .placeholder-container {
