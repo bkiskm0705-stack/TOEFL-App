@@ -1054,9 +1054,7 @@ body {
 .player-text-area span.active {
     background: var(--primary);
     color: white;
-    font-weight: 600;
-    transform: scale(1.05);
-    display: inline-block;
+    box-shadow: 0 0 8px var(--primary);
 }
 
 .player-controls {
@@ -1102,11 +1100,19 @@ body {
     background: var(--surface-dark);
     width: 70px;
     height: 70px;
+    min-width: 70px;
+    /* Prevent squishing */
+    min-height: 70px;
+    /* Prevent squishing */
+    aspect-ratio: 1/1;
+    /* Enforce square */
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
+    /* Prevent flex shrinking */
 }
 
 /* Loop Button Styles */

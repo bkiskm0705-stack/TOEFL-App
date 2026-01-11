@@ -58,6 +58,7 @@ let fcIsFlipped = false;
 // Swipe State
 let touchStartX = 0;
 let touchEndX = 0;
+let lastActiveView = 'list-view'; // Track last active view for settings return
 let isSwiping = false;
 
 
@@ -103,25 +104,7 @@ function setupEventListeners() {
         });
     });
 
-    // Settings
-    // Settings
-    const closeSettings = () => {
-        // Return to last active view or list
-        switchView('list-view');
-        // Reset nav
-        navItems.forEach(n => n.classList.remove('active'));
-        document.querySelector('[data-target="list-view"]').classList.add('active');
-    };
-
-    settingsBtn.addEventListener('click', () => {
-        if (views.settings.classList.contains('active')) {
-            closeSettings();
-        } else {
-            switchView('settings-view');
-        }
-    });
-
-    closeSettingsBtn.addEventListener('click', closeSettings);
+    // Settings logic moved to end of file for state preservation
 
     // --- Listening Mode Logic ---
     const listeningInputContainer = document.getElementById('listening-input-container');
@@ -836,11 +819,7 @@ function populateVoiceList() {
     // Debug: Log all available voices
     console.log('Available voices:', voices.map(v => v.name).join(', '));
 
-    // Debug: Show voices in settings (temporary)
-    const debugEl = document.getElementById('voice-debug');
-    if (debugEl) {
-        debugEl.textContent = 'Available: ' + voices.map(v => v.name).join(', ');
-    }
+
 
     // We strictly use the filtered list for simplicity in this app
     const targetVoices = [
@@ -1051,5 +1030,26 @@ function applyTheme(theme) {
         }
     });
 }
+
+// Settings Button Logic with State Preservation
+settingsBtn.addEventListener('click', () => {
+    const activeView = document.querySelector('.view.active');
+
+    // If currently in settings, close it (toggle behavior)
+    if (activeView && activeView.id === 'settings-view') {
+        switchView(lastActiveView || 'list-view');
+    } else {
+        // Save current view and open settings
+        if (activeView) {
+            lastActiveView = activeView.id;
+        }
+        switchView('settings-view');
+    }
+});
+
+closeSettingsBtn.addEventListener('click', () => {
+    // Restore previous view
+    switchView(lastActiveView);
+});
 
 
