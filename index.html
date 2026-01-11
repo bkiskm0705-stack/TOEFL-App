@@ -21,7 +21,7 @@
     <div class="app-container">
         <!-- Header -->
         <header class="app-header">
-            <h1>TOEFL Vocab <span class="version">ver.1.06</span></h1>
+            <h1>TOEFL Vocab <span class="version">ver.1.06.2</span></h1>
             <div class="header-actions">
                 <button id="settings-btn" aria-label="Settings">
                     <ion-icon name="settings-outline"></ion-icon>
@@ -103,7 +103,23 @@ The preview of me"></textarea>
                         <!-- Words injected here -->
                     </div>
 
+                    <div id="listening-blind-overlay" class="blind-overlay hidden">
+                        <div class="blind-content">
+                            <ion-icon name="headset-outline"></ion-icon>
+                            <h3>Focus Mode</h3>
+                            <p>Close your eyes and listen</p>
+                            <div class="audio-wave">
+                                <span></span><span></span><span></span><span></span><span></span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="player-controls">
+                        <button id="listening-blind-btn" class="control-btn small blind-btn">
+                            <ion-icon name="eye-outline"></ion-icon>
+                            <span>Blind</span>
+                        </button>
+
                         <button id="listening-rw-btn" class="control-btn small">
                             <ion-icon name="play-back-outline"></ion-icon>
                             <span>-5s</span>
@@ -234,7 +250,7 @@ The preview of me"></textarea>
     </div>
 
     <script src="config.js"></script>
-    <script src="script.js?v=1.06"></script>
+    <script src="script.js?v=1.06.2"></script>
 </body>
 
 </html>

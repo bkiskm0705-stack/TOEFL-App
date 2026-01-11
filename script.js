@@ -130,6 +130,7 @@ function setupEventListeners() {
     const listeningStartBtn = document.getElementById('listening-start-btn');
     const listeningBackBtn = document.getElementById('listening-back-btn');
     const listeningTextDisplay = document.getElementById('listening-text-display');
+    const listeningBlindOverlay = document.getElementById('listening-blind-overlay');
     const listeningVoiceLabel = document.getElementById('listening-voice-label');
 
     // Player Controls
@@ -137,6 +138,7 @@ function setupEventListeners() {
     const listeningPlayBtn = document.getElementById('listening-play-btn');
     const listeningFfBtn = document.getElementById('listening-ff-btn'); // +5s
     const listeningLoopBtn = document.getElementById('listening-loop-btn'); // Loop
+    const listeningBlindBtn = document.getElementById('listening-blind-btn'); // Blind
 
     let listeningText = '';
     let listeningUtterance = null;
@@ -144,6 +146,7 @@ function setupEventListeners() {
     let listeningCharIndices = []; // Maps DOM index to char index
     let listeningCurrentCharIndex = 0;
     let listeningLoopEnabled = false; // Loop state
+    let listeningBlindEnabled = false; // Blind mode state
 
     // Time-based tracking for PC compatibility
     let listeningStartTime = 0;
@@ -226,10 +229,22 @@ function setupEventListeners() {
             span.dataset.start = match.index;
             span.dataset.end = match.index + match[0].length;
 
-            // Click to seek
-            span.onclick = () => {
-                playListeningAudio(match.index);
+            // Click/Touch to seek - capture the index in closure
+            const wordStartIndex = match.index;
+            let lastSeekTime = 0;
+
+            const handleSeek = () => {
+                // Prevent double-firing (debounce)
+                const now = Date.now();
+                if (now - lastSeekTime < 300) return;
+                lastSeekTime = now;
+
+                listeningPausedAt = wordStartIndex;
+                playListeningAudio(wordStartIndex);
             };
+
+            // Use click only - works on both desktop and mobile
+            span.addEventListener('click', handleSeek);
 
             listeningTextDisplay.appendChild(span);
             listeningCharIndices.push({
@@ -256,6 +271,9 @@ function setupEventListeners() {
         listeningIsPaused = false;
         listeningCurrentCharIndex = startIndex;
         updatePlayIcon(true);
+
+        // Immediately highlight the starting word
+        highlightWord(startIndex);
 
         const textToSpeak = listeningText.substring(startIndex);
         if (!textToSpeak) {
@@ -390,6 +408,20 @@ function setupEventListeners() {
     listeningLoopBtn.onclick = () => {
         listeningLoopEnabled = !listeningLoopEnabled;
         listeningLoopBtn.classList.toggle('active', listeningLoopEnabled);
+    };
+
+    // Blind button toggle
+    listeningBlindBtn.onclick = () => {
+        listeningBlindEnabled = !listeningBlindEnabled;
+        listeningBlindBtn.classList.toggle('active', listeningBlindEnabled);
+        listeningTextDisplay.classList.toggle('blinded', listeningBlindEnabled);
+
+        // Toggle icon
+        const icon = listeningBlindBtn.querySelector('ion-icon');
+        icon.name = listeningBlindEnabled ? 'eye-off-outline' : 'eye-outline';
+
+        // Toggle overlay visibility
+        listeningBlindOverlay.classList.toggle('hidden', !listeningBlindEnabled);
     };
 
     function stopListening() {
