@@ -833,6 +833,9 @@ let voices = [];
 function populateVoiceList() {
     voices = window.speechSynthesis.getVoices();
 
+    // Debug: Log all available voices
+    console.log('Available voices:', voices.map(v => v.name).join(', '));
+
     // We strictly use the filtered list for simplicity in this app
     const targetVoices = [
         // iOS / Mac
