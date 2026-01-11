@@ -994,15 +994,49 @@ body {
     border-bottom: 1px solid var(--surface-dark);
 }
 
+/* Stylish Icon Button for Player Header */
+.player-header .icon-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.2), rgba(162, 155, 254, 0.1));
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-light);
+    font-size: 1.4rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.2);
+}
+
+.player-header .icon-btn:hover {
+    transform: scale(1.1);
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+    color: white;
+    box-shadow: 0 6px 20px rgba(108, 92, 231, 0.4);
+}
+
+.player-header .icon-btn:active {
+    transform: scale(0.95);
+}
+
 .player-text-area {
     flex: 1;
     overflow-y: auto;
     padding: 1.5rem;
+    margin: 1rem;
     line-height: 1.8;
     font-size: 1.1rem;
     color: var(--text-secondary);
     scroll-behavior: smooth;
     white-space: pre-wrap;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .player-text-area span {
@@ -1073,6 +1107,47 @@ body {
     align-items: center;
     justify-content: center;
     box-shadow: var(--shadow-sm);
+}
+
+/* Loop Button Styles */
+.loop-btn {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.loop-btn.active {
+    color: var(--primary-light);
+    background: rgba(108, 92, 231, 0.2);
+    border-radius: 12px;
+    padding: 0.5rem 0.8rem;
+}
+
+.loop-btn.active ion-icon {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.loop-btn.active::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    background: var(--primary-light);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--primary-light);
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
 }
 
 /* Scrollbar styling for text area */

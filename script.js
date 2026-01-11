@@ -136,12 +136,19 @@ function setupEventListeners() {
     const listeningRwBtn = document.getElementById('listening-rw-btn'); // -5s
     const listeningPlayBtn = document.getElementById('listening-play-btn');
     const listeningFfBtn = document.getElementById('listening-ff-btn'); // +5s
+    const listeningLoopBtn = document.getElementById('listening-loop-btn'); // Loop
 
     let listeningText = '';
     let listeningUtterance = null;
     let listeningIsPaused = false;
     let listeningCharIndices = []; // Maps DOM index to char index
     let listeningCurrentCharIndex = 0;
+    let listeningLoopEnabled = false; // Loop state
+
+    // Time-based tracking for PC compatibility
+    let listeningStartTime = 0;
+    let listeningPausedAt = 0; // Character index where we paused
+    let listeningHighlightInterval = null;
 
     // Setup Listening Mode
     function initListeningMode() {
@@ -239,17 +246,23 @@ function setupEventListeners() {
 
     // Play Audio
     function playListeningAudio(startIndex) {
+        // Clear any existing interval
+        if (listeningHighlightInterval) {
+            clearInterval(listeningHighlightInterval);
+            listeningHighlightInterval = null;
+        }
+
         window.speechSynthesis.cancel();
         listeningIsPaused = false;
+        listeningCurrentCharIndex = startIndex;
         updatePlayIcon(true);
 
-        // Create new utterance from the start index (for simple seeking calculation)
-        // Note: SpeechSynthesis is tricky with exact seeking. 
-        // Strategies: 
-        // 1. Speak whole text, ignore boundary events until startIndex (No, wait, it starts speaking immediately)
-        // 2. Speak substring from startIndex. This is reliable.
-
         const textToSpeak = listeningText.substring(startIndex);
+        if (!textToSpeak) {
+            updatePlayIcon(false);
+            return;
+        }
+
         listeningUtterance = new SpeechSynthesisUtterance(textToSpeak);
 
         // Apply voice settings
@@ -257,18 +270,81 @@ function setupEventListeners() {
         if (voice) listeningUtterance.voice = voice;
         listeningUtterance.rate = 1.0;
 
-        // Boundary Event (Progress Tracking)
+        // Adaptive tracking variables
+        let lastBoundaryTime = Date.now();
+        let lastBoundaryCharIndex = startIndex;
+        let adaptiveCharsPerSecond = 12; // Conservative initial estimate
+        let boundaryEventReceived = false;
+
+        // Timer-based highlighting (only used when no boundary events)
+        listeningHighlightInterval = setInterval(() => {
+            if (listeningIsPaused) return;
+
+            // Only use timer-based estimation if no boundary events are being received
+            if (!boundaryEventReceived) {
+                const elapsed = (Date.now() - lastBoundaryTime) / 1000;
+                const estimatedCharIndex = lastBoundaryCharIndex + Math.floor(elapsed * adaptiveCharsPerSecond);
+
+                if (estimatedCharIndex < listeningText.length && estimatedCharIndex > listeningCurrentCharIndex) {
+                    listeningCurrentCharIndex = estimatedCharIndex;
+                    highlightWord(estimatedCharIndex);
+                }
+            }
+        }, 150);
+
+        // Boundary Event (Progress Tracking) - primary source of truth
         listeningUtterance.onboundary = (event) => {
-            // event.charIndex is absolute to the textToSpeak (substring)
-            // We need to map it back to the original full text
-            const globalCharIndex = startIndex + event.charIndex;
-            listeningCurrentCharIndex = globalCharIndex;
-            highlightWord(globalCharIndex);
+            if (event.name === 'word') {
+                boundaryEventReceived = true;
+                const globalCharIndex = startIndex + event.charIndex;
+
+                // Calculate actual speed from this boundary event
+                const timeSinceLastBoundary = (Date.now() - lastBoundaryTime) / 1000;
+                const charsSinceLastBoundary = globalCharIndex - lastBoundaryCharIndex;
+
+                if (timeSinceLastBoundary > 0.05 && charsSinceLastBoundary > 0) {
+                    // Update adaptive speed (moving average)
+                    const measuredSpeed = charsSinceLastBoundary / timeSinceLastBoundary;
+                    adaptiveCharsPerSecond = adaptiveCharsPerSecond * 0.7 + measuredSpeed * 0.3;
+                }
+
+                // Update tracking variables
+                lastBoundaryTime = Date.now();
+                lastBoundaryCharIndex = globalCharIndex;
+                listeningCurrentCharIndex = globalCharIndex;
+
+                highlightWord(globalCharIndex);
+
+                // Reset flag after a short delay to detect gaps
+                setTimeout(() => { boundaryEventReceived = false; }, 200);
+            }
         };
 
         listeningUtterance.onend = () => {
+            if (listeningHighlightInterval) {
+                clearInterval(listeningHighlightInterval);
+                listeningHighlightInterval = null;
+            }
+
+            // If loop is enabled, restart from beginning
+            if (listeningLoopEnabled) {
+                listeningCurrentCharIndex = 0;
+                listeningPausedAt = 0;
+                playListeningAudio(0);
+                return;
+            }
+
+            listeningIsPaused = false;
             updatePlayIcon(false);
             clearHighlights();
+        };
+
+        listeningUtterance.onerror = () => {
+            if (listeningHighlightInterval) {
+                clearInterval(listeningHighlightInterval);
+                listeningHighlightInterval = null;
+            }
+            updatePlayIcon(false);
         };
 
         window.speechSynthesis.speak(listeningUtterance);
@@ -276,18 +352,21 @@ function setupEventListeners() {
 
     // Controls
     listeningPlayBtn.onclick = () => {
-        if (window.speechSynthesis.speaking) {
-            if (window.speechSynthesis.paused) {
-                window.speechSynthesis.resume();
-                listeningIsPaused = false;
-                updatePlayIcon(true);
-            } else {
-                window.speechSynthesis.pause();
-                listeningIsPaused = true;
-                updatePlayIcon(false);
+        if (listeningIsPaused) {
+            // Resume from saved position
+            playListeningAudio(listeningPausedAt);
+        } else if (window.speechSynthesis.speaking) {
+            // Pause - save current position
+            listeningPausedAt = listeningCurrentCharIndex;
+            window.speechSynthesis.cancel(); // Use cancel instead of pause for reliability
+            if (listeningHighlightInterval) {
+                clearInterval(listeningHighlightInterval);
+                listeningHighlightInterval = null;
             }
+            listeningIsPaused = true;
+            updatePlayIcon(false);
         } else {
-            // Restart if finished
+            // Start/Restart if not playing
             playListeningAudio(listeningCurrentCharIndex || 0);
         }
     };
@@ -297,15 +376,27 @@ function setupEventListeners() {
 
     listeningRwBtn.onclick = () => {
         let newIndex = Math.max(0, listeningCurrentCharIndex - SKIP_CHARS);
+        listeningPausedAt = newIndex;
         playListeningAudio(newIndex);
     };
 
     listeningFfBtn.onclick = () => {
         let newIndex = Math.min(listeningText.length - 1, listeningCurrentCharIndex + SKIP_CHARS);
+        listeningPausedAt = newIndex;
         playListeningAudio(newIndex);
     };
 
+    // Loop button toggle
+    listeningLoopBtn.onclick = () => {
+        listeningLoopEnabled = !listeningLoopEnabled;
+        listeningLoopBtn.classList.toggle('active', listeningLoopEnabled);
+    };
+
     function stopListening() {
+        if (listeningHighlightInterval) {
+            clearInterval(listeningHighlightInterval);
+            listeningHighlightInterval = null;
+        }
         window.speechSynthesis.cancel();
     }
 
