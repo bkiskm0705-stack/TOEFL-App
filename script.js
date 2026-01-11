@@ -836,6 +836,12 @@ function populateVoiceList() {
     // Debug: Log all available voices
     console.log('Available voices:', voices.map(v => v.name).join(', '));
 
+    // Debug: Show voices in settings (temporary)
+    const debugEl = document.getElementById('voice-debug');
+    if (debugEl) {
+        debugEl.textContent = 'Available: ' + voices.map(v => v.name).join(', ');
+    }
+
     // We strictly use the filtered list for simplicity in this app
     const targetVoices = [
         // iOS / Mac
