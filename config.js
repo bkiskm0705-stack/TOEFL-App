@@ -5,7 +5,7 @@ const CONFIG = {
     GOOGLE_CLOUD_API_KEY: "AIzaSyApXU0PcRuDn-KXW2ezGGj2754v_YGY7iY", // ステップ4で取得したキー（AIza...）
     // 高音質音声の設定 (Neural2)
     VOICE_SETTINGS: {
-        MALE: "en-US-Neural2-J",   // おすすめ男性音声
+        MALE: "en-US-Neural2-D",   // おすすめ男性音声 (変更: J -> D)
         FEMALE: "en-US-Neural2-F"  // おすすめ女性音声
     }
 };
