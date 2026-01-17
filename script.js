@@ -69,6 +69,7 @@ class AudioService {
         this.dbName = 'AudioCacheDB';
         this.dbVersion = 1;
         this.db = null;
+        this.currentAudio = null; // Track active audio instance
         this.initDB();
     }
 
@@ -245,10 +246,20 @@ class AudioService {
         return new Blob([byteArray], { type: mimeType });
     }
 
+    stopAudio() {
+        if (this.currentAudio) {
+            this.currentAudio.pause();
+            this.currentAudio.currentTime = 0; // Reset
+            this.currentAudio.src = ""; // Detach
+            this.currentAudio = null;
+        }
+        window.speechSynthesis.cancel();
+    }
+
     // Unified player method
     async playAudio(text, preferredVoiceId = null) {
         // Stop any current playback
-        window.speechSynthesis.cancel();
+        this.stopAudio();
 
         // Determine voice
         // Currently selected voice in app state (from simple selector)
@@ -264,7 +275,19 @@ class AudioService {
                 const audioUrl = await this.getAudio(text, targetVoice);
                 if (audioUrl) {
                     const audio = new Audio(audioUrl);
-                    audio.play();
+                    this.currentAudio = audio; // Track it
+
+                    audio.onended = () => {
+                        this.currentAudio = null;
+                        URL.revokeObjectURL(audioUrl); // Clean up
+                    };
+
+                    try {
+                        await audio.play();
+                    } catch (playError) {
+                        console.error('Audio play error:', playError);
+                        // Interact required?
+                    }
                     return;
                 }
             } catch (e) {
@@ -590,7 +613,7 @@ function setupEventListeners() {
             currentAudioElement.pause();
             currentAudioElement = null;
         }
-        window.speechSynthesis.cancel();
+        audioService.stopAudio(); // Ensure global audio is stopped
 
         listeningIsPaused = false;
         updatePlayIcon(true);
@@ -1244,11 +1267,11 @@ function renderVoiceSelector(containerId) {
 
     // Define the options we want to show
     const options = [
-        { id: 'MALE', label: 'Male (Neural)', icon: 'man-outline', color: '#6c5ce7' },
-        { id: 'FEMALE', label: 'Female (Neural)', icon: 'woman-outline', color: '#ff7675' },
+        { id: 'MALE', label: 'Male (Pro)', icon: 'man-outline', color: '#6c5ce7' },
+        { id: 'FEMALE', label: 'Female (Pro)', icon: 'woman-outline', color: '#ff7675' },
         // Standard Options for Background Audio Mixing
-        { id: 'STANDARD_M', label: 'Male (Standard)', icon: 'man', color: '#b2bec3' },
-        { id: 'STANDARD_F', label: 'Female (Standard)', icon: 'woman', color: '#b2bec3' }
+        { id: 'STANDARD_M', label: 'Male (Free)', icon: 'man', color: '#b2bec3' },
+        { id: 'STANDARD_F', label: 'Female (Free)', icon: 'woman', color: '#b2bec3' }
     ];
 
     options.forEach(opt => {
