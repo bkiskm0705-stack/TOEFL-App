@@ -306,23 +306,23 @@ class AudioService {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'en-US';
 
-        // Apply voice if specific standard voice logic
-        if (!isNeural) {
-            const voices = window.speechSynthesis.getVoices();
-            let selected = null;
+        // Apply voice - select appropriate male/female voice
+        const voices = window.speechSynthesis.getVoices();
+        let selected = null;
 
-            // Try to find a good match for "Male" or "Female" standard
-            if (targetVoice === 'STANDARD_M') {
-                selected = voices.find(v => (v.name.includes('Male') || v.name.includes('David') || v.name.includes('Daniel')) && v.lang.startsWith('en'));
-            } else if (targetVoice === 'STANDARD_F') {
-                selected = voices.find(v => (v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Samantha')) && v.lang.startsWith('en'));
-            } else {
-                // Try exact match or nothing
-                selected = voices.find(v => v.voiceURI === targetVoice || v.name === targetVoice);
-            }
-
-            if (selected) utterance.voice = selected;
+        // Try to find a good match for Male or Female
+        if (targetVoice === 'STANDARD_M' || targetVoice === 'MALE') {
+            // Male voices
+            selected = voices.find(v => (v.name.includes('Male') || v.name.includes('David') || v.name.includes('Daniel')) && v.lang.startsWith('en'));
+        } else if (targetVoice === 'STANDARD_F' || targetVoice === 'FEMALE') {
+            // Female voices
+            selected = voices.find(v => (v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Samantha')) && v.lang.startsWith('en'));
+        } else {
+            // Try exact match or nothing
+            selected = voices.find(v => v.voiceURI === targetVoice || v.name === targetVoice);
         }
+
+        if (selected) utterance.voice = selected;
 
         window.speechSynthesis.speak(utterance);
     }
