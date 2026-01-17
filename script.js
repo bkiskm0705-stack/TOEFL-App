@@ -291,6 +291,11 @@ class AudioService {
                         if (onEnd) onEnd();
                     };
 
+                    audio.onerror = () => {
+                        this.currentAudio = null;
+                        if (onEnd) onEnd();
+                    };
+
                     try {
                         if (onStart) onStart();
                         await audio.play();
@@ -332,6 +337,9 @@ class AudioService {
             if (onStart) onStart();
         };
         utterance.onend = () => {
+            if (onEnd) onEnd();
+        };
+        utterance.onerror = () => {
             if (onEnd) onEnd();
         };
 
@@ -655,6 +663,16 @@ function setupEventListeners() {
                 if (audioUrl) {
                     const audio = new Audio(audioUrl);
                     currentAudioElement = audio;
+
+                    // Time-based word tracking for Cloud TTS
+                    audio.ontimeupdate = () => {
+                        if (audio.duration && listeningCharIndices.length > 0) {
+                            // Estimate word position based on time progress
+                            const progress = audio.currentTime / audio.duration;
+                            const estimatedCharIndex = Math.floor(progress * textToSpeak.length) + startIndex;
+                            highlightWord(estimatedCharIndex);
+                        }
+                    };
 
                     audio.onended = () => {
                         if (listeningLoopEnabled) {
