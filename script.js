@@ -262,8 +262,10 @@ class AudioService {
         window.speechSynthesis.cancel();
     }
 
-    // Unified player method
-    async playAudio(text, preferredVoiceId = null) {
+    // Unified player method with optional callbacks
+    async playAudio(text, preferredVoiceId = null, options = {}) {
+        const { onStart, onEnd } = options;
+
         // Stop any current playback
         this.stopAudio();
 
@@ -286,13 +288,15 @@ class AudioService {
                     audio.onended = () => {
                         this.currentAudio = null;
                         URL.revokeObjectURL(audioUrl); // Clean up
+                        if (onEnd) onEnd();
                     };
 
                     try {
+                        if (onStart) onStart();
                         await audio.play();
                     } catch (playError) {
                         console.error('Audio play error:', playError);
-                        // Interact required?
+                        if (onEnd) onEnd();
                     }
                     return;
                 }
@@ -323,6 +327,13 @@ class AudioService {
         }
 
         if (selected) utterance.voice = selected;
+
+        utterance.onstart = () => {
+            if (onStart) onStart();
+        };
+        utterance.onend = () => {
+            if (onEnd) onEnd();
+        };
 
         window.speechSynthesis.speak(utterance);
     }
@@ -852,8 +863,10 @@ function setupEventListeners() {
     fcAudioBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         const word = fcList[fcCurrentIndex].word;
-        // speakWord(word); -> Replaced
-        audioService.playAudio(word, currentVoiceURI);
+        audioService.playAudio(word, currentVoiceURI, {
+            onStart: () => fcAudioBtn.classList.add('playing'),
+            onEnd: () => fcAudioBtn.classList.remove('playing')
+        });
     });
 
     // Example Audio button (prevent flip)
@@ -861,8 +874,10 @@ function setupEventListeners() {
     fcExampleAudioBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         const example = fcList[fcCurrentIndex].example;
-        // speakWord(example); -> Replaced
-        audioService.playAudio(example, currentVoiceURI);
+        audioService.playAudio(example, currentVoiceURI, {
+            onStart: () => fcExampleAudioBtn.classList.add('playing'),
+            onEnd: () => fcExampleAudioBtn.classList.remove('playing')
+        });
     });
 
     // Flash card review button

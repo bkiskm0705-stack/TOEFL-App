@@ -1136,6 +1136,32 @@ body {
     box-shadow: 0 0 15px var(--primary-color);
 }
 
+.fc-audio-btn.playing {
+    background: var(--primary-color);
+    box-shadow: 0 0 20px var(--primary-color);
+    animation: audio-pulse 0.8s ease-in-out infinite;
+}
+
+.fc-example-audio-btn.playing {
+    background: var(--primary-color);
+    box-shadow: 0 0 20px var(--primary-color);
+    animation: audio-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes audio-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 15px var(--primary-color);
+    }
+
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 0 25px var(--primary-color);
+    }
+}
+
 .fc-hint {
     position: absolute;
     bottom: 2rem;
