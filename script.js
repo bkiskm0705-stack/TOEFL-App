@@ -772,6 +772,15 @@ function setupEventListeners() {
         listeningInputContainer.classList.add('hidden');
         listeningPlayerContainer.classList.remove('hidden');
 
+        // Reset cached audio when starting new session
+        if (currentAudioElement) {
+            currentAudioElement.pause();
+            currentAudioElement = null;
+        }
+        fullAudioUrl = null;
+        fullAudioText = null;
+        fullAudioVoice = null;
+
         renderListeningText(text);
         listeningCurrentCharIndex = 0;
         playListeningAudio(0);
@@ -843,23 +852,13 @@ function setupEventListeners() {
     // We will simplify: Highlight whole text or paragraph, or just show playing state.
 
     let currentAudioElement = null;
+    let fullAudioUrl = null; // Cache the full audio URL
+    let fullAudioText = null; // Track which text the cached audio is for
+    let fullAudioVoice = null; // Track which voice the cached audio is for
 
     async function playListeningAudio(startIndex) {
-        // Stop previous
-        if (currentAudioElement) {
-            currentAudioElement.pause();
-            currentAudioElement = null;
-        }
-        audioService.stopAudio(); // Ensure global audio is stopped
-
         listeningIsPaused = false;
         updatePlayIcon(true);
-
-        const textToSpeak = listeningText.substring(startIndex);
-        if (!textToSpeak) {
-            updatePlayIcon(false);
-            return;
-        }
 
         // Check if we should use Cloud TTS (Pro voices) or Web Speech API (Free voices)
         const isNeural = (currentVoiceURI === 'MALE' || currentVoiceURI === 'FEMALE' || currentVoiceURI.startsWith('en-US-Neural2'));
@@ -868,28 +867,60 @@ function setupEventListeners() {
         highlightWord(startIndex);
 
         if (isNeural) {
-            // Try Cloud TTS for Pro voices
+            // Check if we already have the full audio loaded and it's for the same text/voice
+            if (currentAudioElement && fullAudioText === listeningText && fullAudioVoice === currentVoiceURI) {
+                // Reuse existing audio, just seek to the estimated position
+                if (currentAudioElement.duration) {
+                    const progress = startIndex / listeningText.length;
+                    currentAudioElement.currentTime = progress * currentAudioElement.duration;
+                }
+                currentAudioElement.loop = listeningLoopEnabled;
+                currentAudioElement.play();
+                return;
+            }
+
+            // Stop previous audio if different
+            if (currentAudioElement) {
+                currentAudioElement.pause();
+                currentAudioElement = null;
+            }
+            audioService.stopAudio();
+
+            // Try Cloud TTS for Pro voices - always use FULL text
             try {
-                const audioUrl = await audioService.getAudio(textToSpeak, currentVoiceURI);
+                const audioUrl = await audioService.getAudio(listeningText, currentVoiceURI);
 
                 if (audioUrl) {
                     const audio = new Audio(audioUrl);
                     currentAudioElement = audio;
+                    fullAudioUrl = audioUrl;
+                    fullAudioText = listeningText;
+                    fullAudioVoice = currentVoiceURI;
+
+                    // Use native loop for reliable background looping
+                    audio.loop = listeningLoopEnabled;
+
+                    // If starting from a position other than 0, wait for metadata then seek
+                    if (startIndex > 0) {
+                        audio.onloadedmetadata = () => {
+                            const progress = startIndex / listeningText.length;
+                            audio.currentTime = progress * audio.duration;
+                        };
+                    }
 
                     // Time-based word tracking for Cloud TTS
                     audio.ontimeupdate = () => {
                         if (audio.duration && listeningCharIndices.length > 0) {
                             // Estimate word position based on time progress
                             const progress = audio.currentTime / audio.duration;
-                            const estimatedCharIndex = Math.floor(progress * textToSpeak.length) + startIndex;
+                            const estimatedCharIndex = Math.floor(progress * listeningText.length);
                             highlightWord(estimatedCharIndex);
                         }
                     };
 
                     audio.onended = () => {
-                        if (listeningLoopEnabled) {
-                            playListeningAudio(0);
-                        } else {
+                        // Only handle non-loop case (loop is handled by audio.loop)
+                        if (!listeningLoopEnabled) {
                             listeningIsPaused = false;
                             updatePlayIcon(false);
                             clearHighlights();
@@ -910,6 +941,12 @@ function setupEventListeners() {
         }
 
         // Use Web Speech API for Free voices or as fallback for Pro voices
+        // For Web Speech API, we still use substring since we can't seek
+        if (currentAudioElement) {
+            currentAudioElement.pause();
+            currentAudioElement = null;
+        }
+        audioService.stopAudio();
         playListeningAudioFallback(startIndex);
     }
 
@@ -1017,6 +1054,11 @@ function setupEventListeners() {
     listeningLoopBtn.onclick = () => {
         listeningLoopEnabled = !listeningLoopEnabled;
         listeningLoopBtn.classList.toggle('active', listeningLoopEnabled);
+
+        // Update current audio element's loop property for background playback
+        if (currentAudioElement) {
+            currentAudioElement.loop = listeningLoopEnabled;
+        }
     };
 
     // Blind Button
