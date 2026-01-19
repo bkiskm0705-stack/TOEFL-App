@@ -627,16 +627,33 @@ function setupEventListeners() {
                     <div class="template-item-title">${escapeHtml(template.title)}</div>
                     <div class="template-item-preview">${escapeHtml(template.content.substring(0, 50))}...</div>
                 </div>
-                <button class="template-item-delete" data-index="${index}">
-                    <ion-icon name="trash-outline"></ion-icon>
-                </button>
+                <div class="template-item-actions">
+                    <button class="template-item-edit" data-index="${index}">
+                        <ion-icon name="create-outline"></ion-icon>
+                    </button>
+                    <button class="template-item-delete" data-index="${index}">
+                        <ion-icon name="trash-outline"></ion-icon>
+                    </button>
+                </div>
             `;
 
             // Click to use template
             item.addEventListener('click', (e) => {
                 if (e.target.closest('.template-item-delete')) return;
+                if (e.target.closest('.template-item-edit')) return;
                 listeningTextInput.value = template.content;
                 showListeningContainer('input');
+            });
+
+            // Edit button
+            const editBtn = item.querySelector('.template-item-edit');
+            editBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                editingTemplateIndex = index;
+                templateEditorTitle.textContent = 'Edit Template';
+                templateTitleInput.value = template.title;
+                templateContentInput.value = template.content;
+                showListeningContainer('templateEditor');
             });
 
             // Delete button
