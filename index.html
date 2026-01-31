@@ -21,7 +21,7 @@
     <div class="app-container">
         <!-- Header -->
         <header class="app-header">
-            <h1>TOEFL Vocab <span class="version">ver.1.22</span></h1>
+            <h1>TOEFL Vocab <span class="version">ver.1.23</span></h1>
             <div class="header-actions">
                 <button id="settings-btn" aria-label="Settings">
                     <ion-icon name="settings-outline"></ion-icon>
@@ -199,10 +199,154 @@ The preview of me"></textarea>
 
             <!-- Writing View -->
             <div id="writing-view" class="view">
-                <div class="placeholder-container">
-                    <ion-icon name="create-outline"></ion-icon>
-                    <h2>準備中...</h2>
-                    <p>ライティング機能は現在開発中です。</p>
+                <!-- Input Screen -->
+                <div id="writing-input-container">
+                    <div class="writing-header">
+                        <h2>✍️ TOEFL Writing Grader</h2>
+                        <button id="writing-history-btn" class="template-btn">
+                            <ion-icon name="time-outline"></ion-icon>
+                            <span>History</span>
+                        </button>
+                    </div>
+
+                    <div class="writing-form">
+                        <div class="form-group">
+                            <label for="writing-topic-input">
+                                📋 Topic / Question <span class="optional-badge">(Optional)</span>
+                            </label>
+                            <textarea id="writing-topic-input"
+                                placeholder="Enter the essay topic or question here... (e.g., Do you agree or disagree with the following statement? Technology has made our lives easier.)"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="writing-english-input">📝 Your English Essay <span
+                                    class="required-badge">*Required</span></label>
+                            <textarea id="writing-english-input" placeholder="Write your essay here in English..."
+                                rows="8"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="label-with-toggle">
+                                <label for="writing-japanese-input">🇯🇵 Japanese Translation</label>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="writing-japanese-toggle" checked>
+                                    <span class="toggle-slider"></span>
+                                    <span class="toggle-label">Required</span>
+                                </label>
+                            </div>
+                            <textarea id="writing-japanese-input" placeholder="日本語訳を入力してください..." rows="6"></textarea>
+                        </div>
+
+                        <div class="writing-actions">
+                            <div class="api-limit-info">
+                                <ion-icon name="information-circle-outline"></ion-icon>
+                                <span id="writing-usage-display">Today: 0/10 uses</span>
+                            </div>
+                            <button id="writing-grade-btn" class="primary-btn">
+                                <ion-icon name="sparkles-outline"></ion-icon>
+                                Grade My Essay
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History Screen -->
+                <div id="writing-history-container" class="hidden">
+                    <div class="template-header">
+                        <button id="writing-history-back-btn" class="template-action-btn">
+                            <ion-icon name="arrow-back-outline"></ion-icon>
+                            <span>Back</span>
+                        </button>
+                        <h2>📚 Grading History</h2>
+                        <div class="template-header-spacer"></div>
+                    </div>
+                    <div id="writing-history-list" class="writing-history-list">
+                        <!-- History items injected by JS -->
+                    </div>
+                </div>
+
+                <!-- Loading Screen -->
+                <div id="writing-loading-container" class="hidden">
+                    <div class="writing-loading">
+                        <div class="loading-animation">
+                            <ion-icon name="sparkles"></ion-icon>
+                        </div>
+                        <h3>Geminiが採点中...</h3>
+                        <p>厳格なTOEFL基準で評価しています</p>
+                    </div>
+                </div>
+
+                <!-- Result Screen -->
+                <div id="writing-result-container" class="hidden">
+                    <div class="result-header">
+                        <button id="writing-result-back-btn" class="template-action-btn">
+                            <ion-icon name="arrow-back-outline"></ion-icon>
+                            <span>Back</span>
+                        </button>
+                        <h2>📊 Grading Result</h2>
+                        <div class="template-header-spacer"></div>
+                    </div>
+
+                    <div class="result-content">
+                        <!-- Total Score Card -->
+                        <div class="score-card">
+                            <div class="score-label">Total Score</div>
+                            <div class="score-value" id="result-total-score">--</div>
+                            <div class="score-max">/ 30</div>
+                        </div>
+
+                        <!-- Score Breakdown -->
+                        <div class="result-section">
+                            <h3><ion-icon name="bar-chart-outline"></ion-icon> 項目別スコア</h3>
+                            <div id="result-breakdown" class="score-breakdown">
+                                <!-- Breakdown items injected by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Overall Comment -->
+                        <div class="result-section">
+                            <h3><ion-icon name="chatbubble-outline"></ion-icon> 総評</h3>
+                            <div id="result-comment" class="result-comment-box">
+                                <!-- Comment injected by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Corrections -->
+                        <div class="result-section">
+                            <h3><ion-icon name="create-outline"></ion-icon> 添削・修正箇所</h3>
+                            <div id="result-corrections" class="corrections-list">
+                                <!-- Corrections injected by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Model Answer -->
+                        <div class="result-section">
+                            <h3><ion-icon name="star-outline"></ion-icon> Model Answer</h3>
+                            <div id="result-model-answer" class="model-answer-box">
+                                <!-- Model answer injected by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Key Phrases -->
+                        <div class="result-section">
+                            <h3><ion-icon name="bulb-outline"></ion-icon> Key Phrases</h3>
+                            <div id="result-key-phrases" class="key-phrases-container">
+                                <!-- Key phrases injected by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="result-actions">
+                            <button id="writing-save-btn" class="secondary-btn">
+                                <ion-icon name="bookmark-outline"></ion-icon>
+                                Save Result
+                            </button>
+                            <button id="writing-retry-btn" class="primary-btn">
+                                <ion-icon name="refresh-outline"></ion-icon>
+                                Try Again
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -248,6 +392,10 @@ The preview of me"></textarea>
                     </div>
                 </div>
 
+                <!-- Face Indicator (dots) - Outside card container -->
+                <div class="fc-face-indicator" id="fc-face-indicator">
+                    <!-- Dots injected by JS -->
+                </div>
 
             </div>
 
@@ -327,7 +475,7 @@ The preview of me"></textarea>
     </div>
 
     <script src="config.js"></script>
-    <script src="script.js?v=1.22"></script>
+    <script src="script.js?v=1.23"></script>
 </body>
 
 </html>

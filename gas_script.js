@@ -45,7 +45,17 @@ function doGet(e) {
             pos: row[2], // e.g. 'noun', 'verb'
             meaning: row[3],
             example: row[4],
-            example_ja: row[5] // The Japanese translation of the example
+            example_ja: row[5], // The Japanese translation of the example
+            // POS 2 data (columns G-J)
+            pos2: row[6] || '',
+            meaning2: row[7] || '',
+            example2: row[8] || '',
+            example_ja2: row[9] || '',
+            // POS 3 data (columns K-N)
+            pos3: row[10] || '',
+            meaning3: row[11] || '',
+            example3: row[12] || '',
+            example_ja3: row[13] || ''
         });
     }
 

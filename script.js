@@ -57,6 +57,8 @@ let currentGroupIndex = null;
 let fcList = [];
 let fcCurrentIndex = 0;
 let fcIsFlipped = false;
+let fcCurrentFace = 0;  // 0=front(word), 1=POS1, 2=POS2, 3=POS3
+let fcTotalFaces = 2;   // Minimum 2 (word + POS1), max 4
 // Swipe State
 let touchStartX = 0;
 let touchEndX = 0;
@@ -450,10 +452,76 @@ const MOCK_WORDS = [
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
     applyTheme(currentTheme);
-    fetchWords();
+    preloadAllSheets(); // Preload all sheets at startup
     setupEventListeners();
     setupSheetSelectors();
 });
+
+// Preload all vocabulary sheets in parallel at startup
+async function preloadAllSheets() {
+    const sheets = ['TOEFL_Vocabulary', 'My_Vocabulary'];
+
+    let gasUrl = null;
+    if (typeof CONFIG !== 'undefined' && CONFIG.GAS_URL) {
+        gasUrl = CONFIG.GAS_URL;
+    }
+
+    if (!gasUrl) {
+        console.log('No GAS URL, using mock data.');
+        allWords = MOCK_WORDS;
+        vocabCache['TOEFL_Vocabulary'] = MOCK_WORDS;
+        vocabCache['My_Vocabulary'] = MOCK_WORDS;
+        renderWordList();
+        switchView('list-view');
+        return;
+    }
+
+    // Fetch all sheets in parallel
+    const fetchPromises = sheets.map(async (sheetName) => {
+        try {
+            const url = new URL(gasUrl);
+            url.searchParams.append('sheet', sheetName);
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
+            const response = await fetch(url.toString(), { signal: controller.signal });
+            clearTimeout(timeoutId);
+
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+            const data = await response.json();
+            if (data && data.length > 0) {
+                vocabCache[sheetName] = data;
+                console.log(`Preloaded ${sheetName}: ${data.length} words`);
+            }
+        } catch (error) {
+            console.error(`Error preloading ${sheetName}:`, error);
+            // Continue with other sheets even if one fails
+        }
+    });
+
+    await Promise.all(fetchPromises);
+
+    // Set current sheet data
+    if (vocabCache[currentSheet]) {
+        allWords = vocabCache[currentSheet];
+    } else if (Object.keys(vocabCache).length > 0) {
+        // Fallback to any available cached sheet
+        const firstCached = Object.keys(vocabCache)[0];
+        currentSheet = firstCached;
+        allWords = vocabCache[firstCached];
+    } else {
+        // All failed, use mock data
+        allWords = MOCK_WORDS;
+    }
+
+    renderWordList();
+
+    if (document.getElementById('loading-view').classList.contains('active')) {
+        switchView('list-view');
+    }
+}
 
 function setupSheetSelectors() {
     const sheetBtns = document.querySelectorAll('.sheet-btn');
@@ -1178,15 +1246,30 @@ function setupEventListeners() {
         });
     });
 
-    // Example Audio button (prevent flip)
+    // Example Audio button (prevent flip) - plays correct example based on current face
     const fcExampleAudioBtn = document.getElementById('fc-example-audio-btn');
     fcExampleAudioBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const example = fcList[fcCurrentIndex].example;
-        audioService.playAudio(example, currentVoiceURI, {
-            onStart: () => fcExampleAudioBtn.classList.add('playing'),
-            onEnd: () => fcExampleAudioBtn.classList.remove('playing')
-        });
+        const item = fcList[fcCurrentIndex];
+        let example;
+
+        // Get the correct example based on current face
+        if (fcCurrentFace === 1) {
+            example = item.example;
+        } else if (fcCurrentFace === 2) {
+            example = item.example2;
+        } else if (fcCurrentFace === 3) {
+            example = item.example3;
+        } else {
+            example = item.example; // Default to first example
+        }
+
+        if (example) {
+            audioService.playAudio(example, currentVoiceURI, {
+                onStart: () => fcExampleAudioBtn.classList.add('playing'),
+                onEnd: () => fcExampleAudioBtn.classList.remove('playing')
+            });
+        }
     });
 
     // Flash card review button
@@ -1455,15 +1538,28 @@ function startFlashCards(list, startIndex = 0) {
     fcList = list;
     fcCurrentIndex = startIndex;
     fcIsFlipped = false;
+    fcCurrentFace = 0;  // Reset to front face
 
     switchView('flash-card-view');
     renderCard();
 }
 
+// Calculate total faces based on available POS data
+function getFaceCount(item) {
+    let count = 2; // Minimum: word + POS1
+    if (item.pos2 && item.meaning2) count++;
+    if (item.pos3 && item.meaning3) count++;
+    return count;
+}
+
 function renderCard() {
     const item = fcList[fcCurrentIndex];
 
-    // Temporarily disable transition to prevent seeing the new back content
+    // Calculate total faces for this word
+    fcTotalFaces = getFaceCount(item);
+    fcCurrentFace = 0;  // Always start at front
+
+    // Temporarily disable transition to prevent seeing content switch
     fcCard.style.transition = 'none';
     fcCard.classList.remove('flipped');
     fcIsFlipped = false;
@@ -1476,12 +1572,12 @@ function renderCard() {
         fcCard.style.transition = '';
     }, 50);
 
-    // Front
+    // Set front content (always the word)
     fcWord.textContent = item.word;
 
-    // Back
+    // Set back content to POS1 initially
     fcMeaning.innerHTML = `<span class="pos">${item.pos}</span> ${item.meaning}`;
-    fcExample.textContent = item.example;
+    fcExample.textContent = item.example || '';
     fcExampleJa.textContent = item.example_ja || '';
 
     // Progress
@@ -1494,15 +1590,80 @@ function renderCard() {
         const icon = btn.querySelector('ion-icon');
         icon.name = isInReview ? 'bookmark' : 'bookmark-outline';
     });
+
+    // Render face indicator dots
+    renderFaceIndicator();
+}
+
+// Render the face indicator dots
+function renderFaceIndicator() {
+    const indicator = document.getElementById('fc-face-indicator');
+    if (!indicator) return;
+
+    indicator.innerHTML = '';
+    for (let i = 0; i < fcTotalFaces; i++) {
+        const dot = document.createElement('span');
+        dot.className = 'fc-face-dot' + (i === fcCurrentFace ? ' active' : '');
+        dot.onclick = (e) => {
+            e.stopPropagation();
+            goToFace(i);
+        };
+        indicator.appendChild(dot);
+    }
+}
+
+// Go to a specific face
+function goToFace(faceIndex) {
+    if (faceIndex < 0 || faceIndex >= fcTotalFaces) return;
+    fcCurrentFace = faceIndex;
+    updateCardFace();
+}
+
+// Update the card display based on current face
+function updateCardFace() {
+    const item = fcList[fcCurrentIndex];
+
+    if (fcCurrentFace === 0) {
+        // Face 0: Front (word only)
+        fcCard.classList.remove('flipped');
+        fcIsFlipped = false;
+    } else {
+        // Faces 1-3: Back (POS data)
+        fcCard.classList.add('flipped');
+        fcIsFlipped = true;
+
+        let pos, meaning, example, example_ja;
+
+        if (fcCurrentFace === 1) {
+            pos = item.pos;
+            meaning = item.meaning;
+            example = item.example || '';
+            example_ja = item.example_ja || '';
+        } else if (fcCurrentFace === 2) {
+            pos = item.pos2;
+            meaning = item.meaning2;
+            example = item.example2 || '';
+            example_ja = item.example_ja2 || '';
+        } else if (fcCurrentFace === 3) {
+            pos = item.pos3;
+            meaning = item.meaning3;
+            example = item.example3 || '';
+            example_ja = item.example_ja3 || '';
+        }
+
+        fcMeaning.innerHTML = `<span class="pos">${pos}</span> ${meaning}`;
+        fcExample.textContent = example;
+        fcExampleJa.textContent = example_ja;
+    }
+
+    // Update face indicator
+    renderFaceIndicator();
 }
 
 function flipCard() {
-    fcIsFlipped = !fcIsFlipped;
-    if (fcIsFlipped) {
-        fcCard.classList.add('flipped');
-    } else {
-        fcCard.classList.remove('flipped');
-    }
+    // Cycle through faces on tap
+    fcCurrentFace = (fcCurrentFace + 1) % fcTotalFaces;
+    updateCardFace();
 }
 
 function nextCard() {
@@ -1780,3 +1941,548 @@ closeSettingsBtn.addEventListener('click', () => {
 });
 
 
+// ===== WRITING MODE LOGIC =====
+
+// Gemini API Service
+class GeminiService {
+    constructor(apiKey) {
+        this.apiKey = apiKey;
+        this.models = [
+            'gemini-1.5-flash',  // Primary - more stable for free tier
+            'gemini-2.0-flash',  // Fallback
+            'gemini-1.5-pro'     // Last resort
+        ];
+        this.currentModelIndex = 0;
+    }
+
+    getApiUrl(model) {
+        return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+    }
+
+    async gradeEssay(essay, japaneseText, topic, retryCount = 0) {
+        const prompt = this.buildPrompt(essay, japaneseText, topic);
+
+        const requestBody = {
+            contents: [{
+                parts: [{ text: prompt }]
+            }],
+            generationConfig: {
+                temperature: 0.7,
+                topK: 40,
+                topP: 0.95,
+                maxOutputTokens: 4096,
+            }
+        };
+
+        const model = this.models[this.currentModelIndex];
+        const url = `${this.getApiUrl(model)}?key=${this.apiKey}`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                const errorMsg = error.error?.message || 'Gemini API request failed';
+
+                // Check for rate limit error
+                if (errorMsg.includes('quota') || errorMsg.includes('rate') || response.status === 429) {
+                    // Try fallback model
+                    if (this.currentModelIndex < this.models.length - 1) {
+                        console.log(`Rate limit hit for ${model}, trying next model...`);
+                        this.currentModelIndex++;
+                        return this.gradeEssay(essay, japaneseText, topic, retryCount);
+                    }
+
+                    // Extract retry time if available
+                    const retryMatch = errorMsg.match(/retry in (\d+\.?\d*)/i);
+                    const retrySeconds = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : 60;
+
+                    throw new Error(`APIの利用制限に達しました。${retrySeconds}秒後に再試行してください。`);
+                }
+
+                throw new Error(errorMsg);
+            }
+
+            const data = await response.json();
+            const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (!textContent) {
+                throw new Error('No response from Gemini');
+            }
+
+            // Reset to primary model on success
+            this.currentModelIndex = 0;
+            return this.parseResponse(textContent);
+
+        } catch (error) {
+            // If it's a network error and we haven't tried all models, try next
+            if (error.name === 'TypeError' && this.currentModelIndex < this.models.length - 1) {
+                this.currentModelIndex++;
+                return this.gradeEssay(essay, japaneseText, topic, retryCount);
+            }
+            throw error;
+        }
+    }
+
+    buildPrompt(essay, japaneseText, topic) {
+        const topicSection = topic ? `
+[ESSAY TOPIC/QUESTION]
+${topic}
+
+` : '';
+
+        const japaneseSection = japaneseText ? `
+[JAPANESE TRANSLATION - For reference to understand user's intent]
+${japaneseText}
+
+` : '';
+
+        return `You are an extremely strict TOEFL iBT Writing examiner. Your goal is to help students achieve a perfect score, so you must grade with extreme rigor. Only give high scores for near-perfect writing.
+
+${topicSection}[ENGLISH ESSAY TO GRADE]
+${essay}
+
+${japaneseSection}[SCORING RUBRIC - TOEFL Independent Writing (0-5 per category)]
+
+1. **Organization** (0-5): Clear thesis, logical structure, smooth paragraph transitions
+2. **Development** (0-5): Depth of ideas, specific examples, thorough explanations
+3. **Grammar** (0-5): Grammatical accuracy, sentence variety, no errors
+4. **Vocabulary** (0-5): Range, precision, academic word choice, natural collocations
+5. **Coherence** (0-5): Use of transitions, paragraph unity, logical flow
+
+Total Score = Sum of all categories × 1.2 (max 30)
+
+[GRADING GUIDELINES - BE HARSH]
+- 5: Near-perfect, native-level proficiency
+- 4: Good but with minor issues
+- 3: Adequate but noticeable weaknesses
+- 2: Significant problems affecting comprehension
+- 1: Major issues throughout
+- 0: Incomprehensible or off-topic
+
+[OUTPUT FORMAT]
+Return ONLY valid JSON (no markdown code blocks, no explanation before/after):
+{
+    "totalScore": <number 0-30>,
+    "breakdown": {
+        "organization": { "score": <0-5>, "comment": "日本語で具体的なフィードバック" },
+        "development": { "score": <0-5>, "comment": "日本語で具体的なフィードバック" },
+        "grammar": { "score": <0-5>, "comment": "日本語で具体的なフィードバック" },
+        "vocabulary": { "score": <0-5>, "comment": "日本語で具体的なフィードバック" },
+        "coherence": { "score": <0-5>, "comment": "日本語で具体的なフィードバック" }
+    },
+    "overallComment": "日本語での総評（厳しめに、改善点を明確に指摘）",
+    "corrections": [
+        { "original": "元の表現", "corrected": "修正後の表現", "reason": "日本語で理由を説明" }
+    ],
+    "modelAnswer": "A well-structured model essay in English demonstrating the ideal response (約200-300 words)",
+    "keyPhrases": ["useful phrase 1", "useful phrase 2", "useful phrase 3", "useful phrase 4", "useful phrase 5"]
+}`;
+    }
+
+    parseResponse(text) {
+        // Try to extract JSON from the response
+        let jsonStr = text.trim();
+
+        // Remove markdown code blocks if present
+        if (jsonStr.startsWith('```json')) {
+            jsonStr = jsonStr.slice(7);
+        } else if (jsonStr.startsWith('```')) {
+            jsonStr = jsonStr.slice(3);
+        }
+        if (jsonStr.endsWith('```')) {
+            jsonStr = jsonStr.slice(0, -3);
+        }
+        jsonStr = jsonStr.trim();
+
+        try {
+            const result = JSON.parse(jsonStr);
+
+            // Validate required fields
+            if (typeof result.totalScore !== 'number') {
+                throw new Error('Invalid totalScore');
+            }
+
+            return result;
+        } catch (e) {
+            console.error('Failed to parse Gemini response:', e, text);
+            throw new Error('採点結果の解析に失敗しました。もう一度お試しください。');
+        }
+    }
+}
+
+// Writing Mode State
+let writingHistory = JSON.parse(localStorage.getItem('writingHistory') || '[]');
+let currentGradingResult = null;
+let geminiService = null;
+
+// Initialize Gemini Service
+if (CONFIG.GEMINI_API_KEY) {
+    geminiService = new GeminiService(CONFIG.GEMINI_API_KEY);
+}
+
+// Writing Mode Elements
+const writingInputContainer = document.getElementById('writing-input-container');
+const writingHistoryContainer = document.getElementById('writing-history-container');
+const writingLoadingContainer = document.getElementById('writing-loading-container');
+const writingResultContainer = document.getElementById('writing-result-container');
+
+const writingTopicInput = document.getElementById('writing-topic-input');
+const writingEnglishInput = document.getElementById('writing-english-input');
+const writingJapaneseInput = document.getElementById('writing-japanese-input');
+const writingJapaneseToggle = document.getElementById('writing-japanese-toggle');
+const writingUsageDisplay = document.getElementById('writing-usage-display');
+const writingGradeBtn = document.getElementById('writing-grade-btn');
+
+const writingHistoryBtn = document.getElementById('writing-history-btn');
+const writingHistoryBackBtn = document.getElementById('writing-history-back-btn');
+const writingHistoryList = document.getElementById('writing-history-list');
+
+const writingResultBackBtn = document.getElementById('writing-result-back-btn');
+const writingSaveBtn = document.getElementById('writing-save-btn');
+const writingRetryBtn = document.getElementById('writing-retry-btn');
+
+// Rate Limiting
+function getWritingUsage() {
+    const today = new Date().toISOString().split('T')[0];
+    const usage = JSON.parse(localStorage.getItem('writingDailyUsage') || '{}');
+
+    if (usage.date !== today) {
+        return { date: today, count: 0 };
+    }
+    return usage;
+}
+
+function incrementWritingUsage() {
+    const usage = getWritingUsage();
+    usage.count++;
+    localStorage.setItem('writingDailyUsage', JSON.stringify(usage));
+    updateUsageDisplay();
+}
+
+function updateUsageDisplay() {
+    const usage = getWritingUsage();
+    if (writingUsageDisplay) {
+        writingUsageDisplay.textContent = `Today: ${usage.count}/10 uses`;
+    }
+}
+
+function canUseWritingAPI() {
+    const usage = getWritingUsage();
+    return usage.count < 10;
+}
+
+// Screen Navigation
+function showWritingScreen(screenName) {
+    writingInputContainer.classList.add('hidden');
+    writingHistoryContainer.classList.add('hidden');
+    writingLoadingContainer.classList.add('hidden');
+    writingResultContainer.classList.add('hidden');
+
+    switch (screenName) {
+        case 'input':
+            writingInputContainer.classList.remove('hidden');
+            updateUsageDisplay();
+            break;
+        case 'history':
+            writingHistoryContainer.classList.remove('hidden');
+            renderWritingHistory();
+            break;
+        case 'loading':
+            writingLoadingContainer.classList.remove('hidden');
+            break;
+        case 'result':
+            writingResultContainer.classList.remove('hidden');
+            break;
+    }
+}
+
+// History Management
+function saveToWritingHistory(result, essayData) {
+    const historyItem = {
+        id: Date.now(),
+        date: new Date().toISOString(),
+        topic: essayData.topic,
+        essay: essayData.essay,
+        japanese: essayData.japanese,
+        result: result
+    };
+
+    writingHistory.unshift(historyItem);
+
+    // Limit to 10 items
+    if (writingHistory.length > 10) {
+        writingHistory = writingHistory.slice(0, 10);
+    }
+
+    localStorage.setItem('writingHistory', JSON.stringify(writingHistory));
+}
+
+function deleteFromWritingHistory(id) {
+    writingHistory = writingHistory.filter(item => item.id !== id);
+    localStorage.setItem('writingHistory', JSON.stringify(writingHistory));
+    renderWritingHistory();
+}
+
+function renderWritingHistory() {
+    if (!writingHistoryList) return;
+
+    if (writingHistory.length === 0) {
+        writingHistoryList.innerHTML = `
+            <div class="template-empty">
+                <ion-icon name="document-text-outline"></ion-icon>
+                <p>No grading history yet.<br>Grade an essay to see results here!</p>
+            </div>
+        `;
+        return;
+    }
+
+    writingHistoryList.innerHTML = writingHistory.map(item => {
+        const date = new Date(item.date);
+        const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+        const preview = item.essay.substring(0, 50) + (item.essay.length > 50 ? '...' : '');
+
+        return `
+            <div class="history-item" data-id="${item.id}">
+                <div class="history-item-header">
+                    <span class="history-item-score">${item.result.totalScore}/30</span>
+                    <span class="history-item-date">${dateStr}</span>
+                </div>
+                <div class="history-item-preview">${escapeHtml(preview)}</div>
+                <div class="history-item-actions">
+                    <button class="history-delete-btn" data-id="${item.id}">
+                        <ion-icon name="trash-outline"></ion-icon>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Add event listeners
+    writingHistoryList.querySelectorAll('.history-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            if (e.target.closest('.history-delete-btn')) return;
+
+            const id = parseInt(item.dataset.id);
+            const historyItem = writingHistory.find(h => h.id === id);
+            if (historyItem) {
+                currentGradingResult = historyItem.result;
+                displayGradingResult(historyItem.result);
+                showWritingScreen('result');
+            }
+        });
+    });
+
+    writingHistoryList.querySelectorAll('.history-delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = parseInt(btn.dataset.id);
+            if (confirm('この履歴を削除しますか？')) {
+                deleteFromWritingHistory(id);
+            }
+        });
+    });
+}
+
+// Display Grading Result
+function displayGradingResult(result) {
+    // Total Score
+    const totalScoreEl = document.getElementById('result-total-score');
+    if (totalScoreEl) {
+        totalScoreEl.textContent = result.totalScore;
+    }
+
+    // Breakdown
+    const breakdownEl = document.getElementById('result-breakdown');
+    if (breakdownEl && result.breakdown) {
+        const categories = [
+            { key: 'organization', label: 'Organization' },
+            { key: 'development', label: 'Development' },
+            { key: 'grammar', label: 'Grammar' },
+            { key: 'vocabulary', label: 'Vocabulary' },
+            { key: 'coherence', label: 'Coherence' }
+        ];
+
+        breakdownEl.innerHTML = categories.map(cat => {
+            const data = result.breakdown[cat.key] || { score: 0, comment: '' };
+            const percentage = (data.score / 5) * 100;
+
+            return `
+                <div class="breakdown-item">
+                    <span class="breakdown-label">${cat.label}</span>
+                    <div class="breakdown-bar">
+                        <div class="breakdown-fill" style="width: ${percentage}%"></div>
+                    </div>
+                    <span class="breakdown-score">${data.score}/5</span>
+                </div>
+                <div class="breakdown-comment" style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.8rem; padding-left: 0.5rem;">
+                    ${escapeHtml(data.comment || '')}
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Overall Comment
+    const commentEl = document.getElementById('result-comment');
+    if (commentEl) {
+        commentEl.textContent = result.overallComment || '';
+    }
+
+    // Corrections
+    const correctionsEl = document.getElementById('result-corrections');
+    if (correctionsEl && result.corrections) {
+        if (result.corrections.length === 0) {
+            correctionsEl.innerHTML = '<p style="color: var(--text-secondary);">修正箇所はありません。</p>';
+        } else {
+            correctionsEl.innerHTML = result.corrections.map(c => `
+                <div class="correction-item">
+                    <div class="correction-original">${escapeHtml(c.original)}</div>
+                    <div class="correction-corrected">→ ${escapeHtml(c.corrected)}</div>
+                    <div class="correction-reason">${escapeHtml(c.reason)}</div>
+                </div>
+            `).join('');
+        }
+    }
+
+    // Model Answer
+    const modelAnswerEl = document.getElementById('result-model-answer');
+    if (modelAnswerEl) {
+        modelAnswerEl.textContent = result.modelAnswer || '';
+    }
+
+    // Key Phrases
+    const keyPhrasesEl = document.getElementById('result-key-phrases');
+    if (keyPhrasesEl && result.keyPhrases) {
+        keyPhrasesEl.innerHTML = result.keyPhrases.map(phrase =>
+            `<span class="key-phrase">${escapeHtml(phrase)}</span>`
+        ).join('');
+    }
+}
+
+// Submit for Grading
+async function submitForGrading() {
+    const topic = writingTopicInput?.value.trim() || '';
+    const essay = writingEnglishInput?.value.trim() || '';
+    const japanese = writingJapaneseInput?.value.trim() || '';
+    const isJapaneseRequired = writingJapaneseToggle?.checked ?? true;
+
+    // Validation
+    if (!essay) {
+        alert('英語のエッセイを入力してください。');
+        return;
+    }
+
+    if (isJapaneseRequired && !japanese) {
+        alert('日本語訳を入力してください。（任意にする場合はトグルをオフにしてください）');
+        return;
+    }
+
+    if (!canUseWritingAPI()) {
+        alert('本日の利用回数（10回）に達しました。明日またお試しください。');
+        return;
+    }
+
+    if (!geminiService) {
+        alert('Gemini APIキーが設定されていません。config.jsを確認してください。');
+        return;
+    }
+
+    // Show loading
+    showWritingScreen('loading');
+
+    try {
+        const result = await geminiService.gradeEssay(essay, japanese, topic);
+        currentGradingResult = result;
+
+        // Store essay data for potential saving
+        currentGradingResult._essayData = { topic, essay, japanese };
+
+        incrementWritingUsage();
+        displayGradingResult(result);
+        showWritingScreen('result');
+    } catch (error) {
+        console.error('Grading error:', error);
+        alert('採点中にエラーが発生しました: ' + error.message);
+        showWritingScreen('input');
+    }
+}
+
+// Event Listeners for Writing Mode
+if (writingGradeBtn) {
+    writingGradeBtn.addEventListener('click', submitForGrading);
+}
+
+if (writingHistoryBtn) {
+    writingHistoryBtn.addEventListener('click', () => {
+        showWritingScreen('history');
+    });
+}
+
+if (writingHistoryBackBtn) {
+    writingHistoryBackBtn.addEventListener('click', () => {
+        showWritingScreen('input');
+    });
+}
+
+if (writingResultBackBtn) {
+    writingResultBackBtn.addEventListener('click', () => {
+        showWritingScreen('input');
+    });
+}
+
+if (writingSaveBtn) {
+    writingSaveBtn.addEventListener('click', () => {
+        if (currentGradingResult && currentGradingResult._essayData) {
+            saveToWritingHistory(currentGradingResult, currentGradingResult._essayData);
+            alert('採点結果を保存しました。');
+            writingSaveBtn.disabled = true;
+            writingSaveBtn.innerHTML = '<ion-icon name="checkmark-outline"></ion-icon> Saved';
+        }
+    });
+}
+
+if (writingRetryBtn) {
+    writingRetryBtn.addEventListener('click', () => {
+        currentGradingResult = null;
+        writingSaveBtn.disabled = false;
+        writingSaveBtn.innerHTML = '<ion-icon name="bookmark-outline"></ion-icon> Save Result';
+        showWritingScreen('input');
+    });
+}
+
+// Japanese Toggle Label Update
+if (writingJapaneseToggle) {
+    const toggleLabel = writingJapaneseToggle.parentElement.querySelector('.toggle-label');
+    writingJapaneseToggle.addEventListener('change', () => {
+        if (toggleLabel) {
+            toggleLabel.textContent = writingJapaneseToggle.checked ? 'Required' : 'Optional';
+        }
+    });
+}
+
+// Initialize Writing Mode when view is shown
+function initWritingMode() {
+    showWritingScreen('input');
+    updateUsageDisplay();
+
+    // Reset save button state
+    if (writingSaveBtn) {
+        writingSaveBtn.disabled = false;
+        writingSaveBtn.innerHTML = '<ion-icon name="bookmark-outline"></ion-icon> Save Result';
+    }
+}
+
+// Update navigation to initialize Writing Mode
+const originalSwitchView = switchView;
+switchView = function (viewId) {
+    originalSwitchView(viewId);
+    if (viewId === 'writing-view') {
+        initWritingMode();
+    }
+};
