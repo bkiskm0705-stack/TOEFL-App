@@ -1763,6 +1763,11 @@ function populateVoiceList() {
     // Render to specialized containers
     renderVoiceSelector('voice-selector'); // Settings
     renderVoiceSelector('listening-voice-selector'); // Listening Mode
+
+    // Also render model selector when settings are populated
+    if (typeof renderModelSelector === 'function') {
+        renderModelSelector();
+    }
 }
 
 function renderVoiceSelector(containerId) {
@@ -1813,6 +1818,43 @@ function renderVoiceSelector(containerId) {
 
 function updateActiveVoiceUI(uri) {
     populateVoiceList();
+}
+
+// Model Selector for Settings
+function renderModelSelector() {
+    const container = document.getElementById('model-selector');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    GEMINI_MODELS.forEach(model => {
+        const btn = document.createElement('button');
+        btn.className = 'model-btn';
+        if (selectedGeminiModel === model.id) {
+            btn.classList.add('active');
+        }
+
+        btn.innerHTML = `
+            <div class="model-info">
+                <span class="model-label">${model.label}</span>
+                <span class="model-desc">${model.description}</span>
+            </div>
+        `;
+
+        btn.onclick = () => {
+            selectedGeminiModel = model.id;
+            localStorage.setItem('geminiModel', selectedGeminiModel);
+            renderModelSelector();
+        };
+
+        container.appendChild(btn);
+    });
+}
+
+// Initialize selectors
+function initializeSelectors() {
+    populateVoiceList();
+    renderModelSelector();
 }
 
 function speakWord(text) {
@@ -1943,16 +1985,28 @@ closeSettingsBtn.addEventListener('click', () => {
 
 // ===== WRITING MODE LOGIC =====
 
+// Available Gemini Models
+const GEMINI_MODELS = [
+    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', description: 'Highest quality' },
+    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Fast & capable' },
+    { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', description: 'Lightweight' },
+    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', description: 'Stable' },
+    { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', description: 'Compact' },
+];
+
+// Get selected model from localStorage
+let selectedGeminiModel = localStorage.getItem('geminiModel') || 'gemini-2.5-flash';
+
 // Gemini API Service
 class GeminiService {
     constructor(apiKey) {
         this.apiKey = apiKey;
-        this.models = [
-            'gemini-1.5-flash',  // Primary - more stable for free tier
-            'gemini-2.0-flash',  // Fallback
-            'gemini-1.5-pro'     // Last resort
-        ];
+        this.models = GEMINI_MODELS.map(m => m.id);
         this.currentModelIndex = 0;
+    }
+
+    getSelectedModel() {
+        return selectedGeminiModel;
     }
 
     getApiUrl(model) {
@@ -1974,7 +2028,7 @@ class GeminiService {
             }
         };
 
-        const model = this.models[this.currentModelIndex];
+        const model = this.getSelectedModel();
         const url = `${this.getApiUrl(model)}?key=${this.apiKey}`;
 
         try {

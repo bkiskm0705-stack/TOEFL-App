@@ -2874,3 +2874,72 @@ body {
     color: var(--primary-light);
     border-color: rgba(52, 152, 219, 0.3);
 }
+
+/* ===== MODEL SELECTOR STYLES ===== */
+.model-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.model-btn {
+    display: flex;
+    align-items: center;
+    padding: 0.8rem 1rem;
+    background: var(--surface-dark);
+    border: 2px solid transparent;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.model-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateX(4px);
+}
+
+.model-btn.active {
+    border-color: var(--primary-color);
+    background: rgba(108, 92, 231, 0.15);
+}
+
+.model-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.model-label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.model-desc {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* Theme Variants */
+[data-theme="nature"] .model-btn {
+    background: #fff;
+}
+
+[data-theme="nature"] .model-btn:hover {
+    background: #f8f9fa;
+}
+
+[data-theme="nature"] .model-btn.active {
+    border-color: var(--primary-color);
+    background: rgba(39, 174, 96, 0.1);
+}
+
+[data-theme="midnight"] .model-btn {
+    border-color: rgba(52, 152, 219, 0.1);
+}
+
+[data-theme="midnight"] .model-btn.active {
+    border-color: var(--primary-color);
+    background: rgba(52, 152, 219, 0.15);
+}
