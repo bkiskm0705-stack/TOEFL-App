@@ -3,7 +3,7 @@
 const CONFIG = {
     GAS_URL: "https://script.google.com/macros/s/AKfycbwyGBI8izGS4M-yu0U8U4JtLlKyXmOIGywSm7th67tdPHJi_8PbVAsFtxCt4LUtOwu5/exec",
     GOOGLE_CLOUD_API_KEY: "AIzaSyApXU0PcRuDn-KXW2ezGGj2754v_YGY7iY", // ステップ4で取得したキー（AIza...）
-    GEMINI_API_KEY: "AIzaSyB5kwm-eypQMrCUHIBI69vawysMeZ3dTfc",
+    GEMINI_API_KEY: "AIzaSyBERutshmasVMvIdvD1iuxwLorAVAJNE3E",
     // 高音質音声の設定 (Neural2)
     VOICE_SETTINGS: {
         MALE: "en-US-Neural2-D",   // おすすめ男性音声 (変更: J -> D)
