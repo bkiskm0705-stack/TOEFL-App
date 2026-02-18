@@ -1,0 +1,17 @@
+{
+    "name": "VarsAi",
+    "short_name": "VarsAi",
+    "version": "1.26",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#0a0a1a",
+    "theme_color": "#6c5ce7",
+    "icons": [
+        {
+            "src": "icon_VarsAi.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

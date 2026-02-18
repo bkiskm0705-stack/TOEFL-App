@@ -4,8 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TOEFL Vocabulary</title>
+    <title>VarsAi</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon_VarsAi.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="VarsAi">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,7 +27,7 @@
     <div class="app-container">
         <!-- Header -->
         <header class="app-header">
-            <h1>TOEFL Vocab <span class="version">ver.1.25</span></h1>
+            <h1>VarsAi <span class="version">ver.1.26</span></h1>
             <div class="header-actions">
                 <button id="settings-btn" aria-label="Settings">
                     <ion-icon name="settings-outline"></ion-icon>
@@ -470,9 +476,13 @@ The preview of me"></textarea>
                             <span class="preview nature-preview"></span>
                             <span>Nature</span>
                         </button>
-                        <button class="theme-btn" data-theme="midnight">
-                            <span class="preview midnight-preview"></span>
-                            <span>Midnight</span>
+                        <button class="theme-btn" data-theme="blue">
+                            <span class="preview blue-preview"></span>
+                            <span>Blue</span>
+                        </button>
+                        <button class="theme-btn" data-theme="green">
+                            <span class="preview green-preview"></span>
+                            <span>Green</span>
                         </button>
                     </div>
                 </div>
