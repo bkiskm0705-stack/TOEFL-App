@@ -15,6 +15,9 @@ function doGet(e) {
         if (sheetName === 'My_Vocabulary') {
             sheet = ss.getSheetByName('My Vocab') || ss.getSheetByName('My_Vocablary');
         }
+        if (!sheet && sheetName === 'TOEIC_Golden') {
+            sheet = ss.getSheetByName('TOEIC Golden') || ss.getSheetByName('TOEICGolden');
+        }
 
         // If still not found, default to first sheet
         if (!sheet) sheet = ss.getSheets()[0];

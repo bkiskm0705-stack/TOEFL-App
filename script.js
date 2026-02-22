@@ -44,7 +44,9 @@ let currentSheet = 'TOEFL_Vocabulary';
 let allWords = [];
 let vocabCache = {}; // Cache for sheet data: { 'SheetName': [data] }
 
-let currentTheme = localStorage.getItem('theme') || 'nebula';
+let currentTheme = localStorage.getItem('theme') || 'blue-dark';
+// Migrate old theme names
+if (currentTheme === 'nebula' || currentTheme === 'nature') currentTheme = 'blue-dark';
 let currentQuiz = {
     score: 0,
     currentQuestionIndex: 0,
@@ -459,7 +461,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Preload all vocabulary sheets in parallel at startup
 async function preloadAllSheets() {
-    const sheets = ['TOEFL_Vocabulary', 'My_Vocabulary'];
+    const sheets = ['TOEFL_Vocabulary', 'My_Vocabulary', 'TOEIC_Golden'];
 
     let gasUrl = null;
     if (typeof CONFIG !== 'undefined' && CONFIG.GAS_URL) {
@@ -471,6 +473,7 @@ async function preloadAllSheets() {
         allWords = MOCK_WORDS;
         vocabCache['TOEFL_Vocabulary'] = MOCK_WORDS;
         vocabCache['My_Vocabulary'] = MOCK_WORDS;
+        vocabCache['TOEIC_Golden'] = MOCK_WORDS;
         renderWordList();
         switchView('list-view');
         return;
@@ -1512,6 +1515,8 @@ function renderGroups(words) {
             prefix = 'TOEFL';
         } else if (currentSheet === 'My_Vocabulary') {
             prefix = 'My';
+        } else if (currentSheet === 'TOEIC_Golden') {
+            prefix = 'TOEIC';
         }
 
         btn.innerHTML = `
